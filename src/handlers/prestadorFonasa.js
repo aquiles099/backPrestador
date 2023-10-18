@@ -1,6 +1,7 @@
 const APIError = require('../utils/error');
 const { validateAtendedor } = require('../schemas/validate');
-
+const moment = require('moment');
+const fs = require('fs');
 
 const axios = require('axios');
 
@@ -18,7 +19,6 @@ const INFO_RESPONSE = Object.freeze({
  */
 exports.obtenerDetalle = async (idProceso) => {
     try {
-    
         const token = await getToken();          
         const url= "https://fonasa.custhelp.com/cc/WSMisCasos/obtenerDetalle/proceso/" + idProceso;      
         responseOP = await axios.get(url, {headers: {jwt:token}});   
@@ -87,12 +87,38 @@ exports.obtenerHistorial = async (idProceso) => {
         };
     }
 };
+
+/**
+ * Obtiene el token desde un arhivo o se solicita por el api 
+ * @returns 
+ */
 const getToken = async () => {
     try {
-        const url= "https://fonasa.custhelp.com/cc/WSMisCasos/validarAuth"; 
-        const body = {user : "prestadorBupa", password: "jS8DIoLp34VX"}        
-        responseOP = await axios.post(url, body);         
-        return responseOP.data.response.jwt;        
+        let responseOP;        
+        const filePath = './datos.json'; 
+        let tokenData;
+        const jsonContent = fs.readFileSync(filePath, 'utf-8');        
+        const jsonDataToken = JSON.parse(jsonContent);        
+        let fechaAnterior = moment(jsonDataToken.fechaCreacion); 
+        let fechaActual = moment(); 
+        const minutosDiferencia = fechaActual.diff(fechaAnterior, 'minutes');
+
+        if(minutosDiferencia > 5) {
+            console.log('dentro del if');
+            const url= "https://fonasa.custhelp.com/cc/WSMisCasos/validarAuth"; 
+            const body = {user : "prestadorBupa", password: "jS8DIoLp34VX"}        
+            responseOP = await axios.post(url, body);  
+            tokenData = {
+                token:  responseOP.data.response.jwt,
+                fechaCreacion: moment().format()
+            };
+            const jsonData = JSON.stringify(tokenData);
+            fs.writeFileSync(filePath, jsonData);
+        }else{
+            tokenData = jsonDataToken
+        }
+
+        return tokenData.token;        
     } catch (e) {
         let mensaje = undefined;
         let codigo = undefined;

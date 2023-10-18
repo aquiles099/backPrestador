@@ -1,8 +1,11 @@
 const express = require('express');
 const prestadorFonasa = require('../handlers/prestadorFonasa');
-
+const cors = require('cors'); 
 const app = express();
+
 app.use(express.json());
+app.use(cors());
+
 
 //healthcheck
 const healthcheckEndpoint = function (req, res) {
